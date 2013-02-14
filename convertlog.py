@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
-import time
+import time,urllib2
+import xml.etree.ElementTree as ET
 from datetime import datetime
+from sys import argv
 
 def getTimeStamp():
     #2013-02-13 13:58:38.431522
@@ -14,6 +16,76 @@ def getDistance(lat1,lon1,lat2,lon2):
     deltalatmi = deltalat*69
     deltalonmi = deltalon*49
     return sqrt(deltalatmi**2+deltalonmi**2)
+
+def getStopCoords(xml):
+    root = ET.fromstring(xml) #root is body
+    route = root.find('route')
+    stops = route.findall('stop')
+    stopDict = {}
+    for stop in stops:
+        stopDict[stop.get('tag')]=(stop.get('title'),stop.get('lat'),stop.get('lon'))
+    return stopDict
+
+def makeOneWayStopPath(xml):
+    stopDict = getStopCoords(xml)
+    root = ET.fromstring(xml) #root is body
+    route = root.find('route')
+    direction = route.find('direction') #only take first one
+    stops = direction.findall('stop')
+    path = []
+    for stop in stops:
+        stopdata = stopDict[stop.get('tag')]
+        path.append((stopdata[1],stopdata[2]))
+    for stop in path:
+        print stop[1],stop[0]
+    return path
+
+def makeReturnStopPath(xml):
+    stopDict = getStopCoords(xml)
+    root = ET.fromstring(xml) #root is body
+    route = root.find('route')
+    direction = route.findall('direction')[1] #only take second one
+    stops = direction.findall('stop')
+    path = []
+    for stop in stops:
+        stopdata = stopDict[stop.get('tag')]
+        path.append((stopdata[1],stopdata[2]))
+    for stop in path:
+        print stop[1],stop[0]
+    return path
+
+def makePath():
+    return pointslist
+
+def getRouteXML(routenum):
+    url = 'http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=mbta&r=%d'%routenum
+    try:
+        response = urllib2.urlopen(url)
+        xml = response.read()
+        return xml
+    except Exception,e:
+        print e
+
+# def getRoute(routenum):
+#     url = 'http://webservices.nextbus.com/service/publicXMLFeed?command=routeConfig&a=mbta&r=%d'%routenum
+#     try:
+#         response = urllib2.urlopen(url)
+#         xml = response.read()
+#     except Exception,e:
+#         print e
+#     root = ET.fromstring(xml) #root is body
+#     route = root.find('route')
+#     paths = route.findall('path')
+#     coordlist = []
+#     for path in paths:
+#         points=path.findall('point')
+#         for point in points:
+#             lat = point.get('lat')
+#             lon = point.get('lon')
+#             coordlist.append((lon,lat))
+#             print lon,lat
+#         print ""
+#     return route #ordered list of pairs
 
 def getTimeDiff(t1,t2):
     #convert from msec
@@ -127,7 +199,11 @@ def writeLatitudesLongitudes(latfilename,longfilename,busDict):
 
 def main():
     print getTimeStamp()
-    busDict = readLog('test.log')
-    writeTable('test.txt',busDict)
-    writeLatitudesLongitudes('lat.log','long.log',busDict)
+    #busDict = readLog('test.log')
+    #writeTable('test.txt',busDict)
+    ##writeLatitudesLongitudes('lat.log','long.log',busDict)
+    xml = getRouteXML(1)
+    makeOneWayStopPath(xml)
+    print ''
+    makeReturnStopPath(xml)
 main()

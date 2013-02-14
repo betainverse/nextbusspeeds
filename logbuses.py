@@ -87,10 +87,11 @@ def getBuses(xml):
 def parseBus(vehicle):
     busID=vehicle.get('id')
     predictable=vehicle.get('predictable')
-    destination = getDestination(vehicle.get('dirTag'))
+    direction = vehicle.get('dirTag')
+    #destination = getDestination(vehicle.get('dirTag'))
     lat = float(vehicle.get('lat'))
     lon = float(vehicle.get('lon'))    
-    return "%s %s %0.7f %0.7f %s"%(busID,destination,lat,lon,getTimeStamp())
+    return "%s %s %0.7f %0.7f %s"%(busID,direction,lat,lon,getTimeStamp())
 
 def collectData(routenums):
     while True:
