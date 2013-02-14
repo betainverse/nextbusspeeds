@@ -92,12 +92,16 @@ def parseBus(vehicle):
     return "%s %s %0.7f %0.7f %s"%(busID,destination,lat,lon,getTimeStamp())
 
 def collectData(routenum):
+    logfilename = 'Route%d-%s.log'%(routenum,getTimeStamp().split()[0])
     while True:
         try:
             xml=getXML(routenum,0)
             buses = getBuses(xml)
-            for bus in buses:
-                print parseBus(bus)
+            if len(buses)>0:
+                logfile = open(logfilename, 'a')
+                for bus in buses:
+                    logfile.write(parseBus(bus)+'\n')
+                logfile.close()
         except Exception, e:
             print e
         time.sleep(60)
