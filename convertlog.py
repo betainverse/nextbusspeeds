@@ -54,6 +54,8 @@ def getDirectionStopData(xml,dirTag):
 #have tag-indexed dictionary that gives distance from start
 #have coord indexed dictionary (for a direction?) that gives tag
 
+# route lat lon -> percent completion
+
 def makeOneWayStopPath(xml):
     stopDict = getStopInfo(xml)
     root = ET.fromstring(xml) #root is body
