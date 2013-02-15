@@ -17,7 +17,7 @@ def getDistance(lat1,lon1,lat2,lon2):
     deltalonmi = deltalon*49
     return sqrt(deltalatmi**2+deltalonmi**2)
 
-def getStopCoords(xml):
+def getStopInfo(xml):
     root = ET.fromstring(xml) #root is body
     route = root.find('route')
     stops = route.findall('stop')
@@ -26,8 +26,36 @@ def getStopCoords(xml):
         stopDict[stop.get('tag')]=(stop.get('title'),stop.get('lat'),stop.get('lon'))
     return stopDict
 
+def getDirectionInfo(xml):
+    root = ET.fromstring(xml) #root is body
+    route = root.find('route')
+    directions = route.findall('direction')
+    for d in directions:
+        stops = d.findall('stop')
+        stopTags = [stop.get('tag') for stop in stops]
+        dirDict[d.get('tag')]=(d.get('title'),d.get('name'),stopTags)
+    return dirDict
+    
+def getDirectionName(xml,dirTag):
+    return getDirectionInfo(xml)[dirTag][1]
+
+def getDirectionTitle(xml,dirTag):
+    return getDirectionTitle(xml)[dirTag][0]
+    
+def getDirectionStopData(xml,dirTag):
+    stopDict = getStopInfo(xml)
+    stopTags = getDirectionInfo(xml)[dirTag][2]
+    CoordList = [(stopDict[stoptag][1],stopDict[stoptag][2]) for stoptag in stopTags]
+    return CoordList
+
+#somehow calculate distance from one stop to the next, store in a dictionary indexed
+#by coordinates.
+
+#have tag-indexed dictionary that gives distance from start
+#have coord indexed dictionary (for a direction?) that gives tag
+
 def makeOneWayStopPath(xml):
-    stopDict = getStopCoords(xml)
+    stopDict = getStopInfo(xml)
     root = ET.fromstring(xml) #root is body
     route = root.find('route')
     direction = route.find('direction') #only take first one
@@ -41,7 +69,7 @@ def makeOneWayStopPath(xml):
     return path
 
 def makeReturnStopPath(xml):
-    stopDict = getStopCoords(xml)
+    stopDict = getStopInfo(xml)
     root = ET.fromstring(xml) #root is body
     route = root.find('route')
     direction = route.findall('direction')[1] #only take second one
@@ -53,6 +81,10 @@ def makeReturnStopPath(xml):
     for stop in path:
         print stop[1],stop[0]
     return path
+
+def getBusProgress(direction,lat,lon):
+    xml = getRouteXML(routenum)
+    
 
 def makePath():
     return pointslist
