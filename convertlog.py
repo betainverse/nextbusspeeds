@@ -4,6 +4,7 @@ import time,urllib2
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from sys import argv
+from math import sin,cos,atan2,sqrt,pi
 
 def getTimeStamp():
     #2013-02-13 13:58:38.431522
@@ -17,6 +18,25 @@ def getDistance(lat1,lon1,lat2,lon2):
     deltalonmi = deltalon*49
     return sqrt(deltalatmi**2+deltalonmi**2)
 
+def deg2rad(deg):
+    rad = deg * pi/180
+    return rad
+
+def getStopDist(stop1,stop2): #check need for math
+    #based on js http://andrew.hedges.name/experiments/haversine/
+    lat2 = deg2rad(float(stop2.get('lat')))
+    lat1 = deg2rad(float(stop1.get('lat')))
+    lon1 = deg2rad(float(stop1.get('lon')))
+    lon2 = deg2rad(float(stop2.get('lon')))
+    dlat = lat2-lat1
+    dlon = lon2-lon1
+    a = (sin(dlat/2))**2 + cos(lat1) * cos(lat2) * (sin(dlon/2))**2
+    c = 2 * atan2( sqrt(a), sqrt(1-a) )
+    R = 3961
+    d = R * c #(where R is the radius of the Earth) (3961 miles & 6373 km)
+    #return getDistance(lat1,lon1,lat2,lon2)
+    return d
+
 def getStopInfo(xml):
     root = ET.fromstring(xml) #root is body
     route = root.find('route')
@@ -26,10 +46,23 @@ def getStopInfo(xml):
         stopDict[stop.get('tag')]=(stop.get('title'),stop.get('lat'),stop.get('lon'))
     return stopDict
 
+def getStops(xml):
+    root = ET.fromstring(xml) #root is body
+    route = root.find('route')
+    stops = route.findall('stop')
+    return stops
+
+def getStop(xml,stoptag):
+    allstops = getStops(xml)
+    for stop in allstops:
+        if stop.get('tag')==stoptag:
+            return stop
+
 def getDirectionInfo(xml):
     root = ET.fromstring(xml) #root is body
     route = root.find('route')
     directions = route.findall('direction')
+    dirDict = {}
     for d in directions:
         stops = d.findall('stop')
         stopTags = [stop.get('tag') for stop in stops]
@@ -48,8 +81,36 @@ def getDirectionStopData(xml,dirTag):
     CoordList = [(stopDict[stoptag][1],stopDict[stoptag][2]) for stoptag in stopTags]
     return CoordList
 
+def getDirectionStopList(xml,dirTag):
+    stopDict = getStopInfo(xml)
+    stopTags = getDirectionInfo(xml)[dirTag][2]
+    allstops = getStops(xml)
+    dirStops = [getStop(xml,stopTag) for stopTag in stopTags]
+    return dirStops
+
+def getDistFromOrigin(stop):
+    return float(stop.get('totalDist'))
+
+def addDistDataToStops(stoplist):
+    stoplist[0].set('totalDist','0')
+    stoplist[0].set('distToPred','0')
+    for i in range(1,len(stoplist)):
+        pred = getStopDist(stoplist[i],stoplist[i-1])
+        total = getDistFromOrigin(stoplist[i-1])+pred
+        print i,pred,total
+        stoplist[i].set('totalDist',str(total))
+        stoplist[i].set('distToPred',str(pred))
+    #return stoplist
+
+def getDistFromPred(stop):
+    return float(stop.get('distToPred'))
+
+def insertPointToStops(routepoints,newpoint):
+    
+    return 0
+
 #somehow calculate distance from one stop to the next, store in a dictionary indexed
-#by coordinates.
+#by coordinates. No, store in XML objects.
 
 #have tag-indexed dictionary that gives distance from start
 #have coord indexed dictionary (for a direction?) that gives tag
@@ -84,7 +145,7 @@ def makeReturnStopPath(xml):
         print stop[1],stop[0]
     return path
 
-def getBusProgress(direction,lat,lon):
+def getBusProgress(bus):
     xml = getRouteXML(routenum)
     
 
@@ -237,7 +298,16 @@ def main():
     #writeTable('test.txt',busDict)
     ##writeLatitudesLongitudes('lat.log','long.log',busDict)
     xml = getRouteXML(1)
-    makeOneWayStopPath(xml)
+    #stops=getStops(xml)
+    dirTag = '1_0_var0'
+    stops = getDirectionStopList(xml,dirTag)
+    addDistDataToStops(stops)
+    print getStopDist(stops[0],stops[len(stops)-1])
+    print stops[0].get('totalDist'),stops[len(stops)-1].get('totalDist')
+    print stops[0].get('distToPred'),stops[len(stops)-1].get('distToPred')
+    for stop in stops:
+        print getDistFromOrigin(stop)
+    #makeOneWayStopPath(xml)
     print ''
-    makeReturnStopPath(xml)
+    #makeReturnStopPath(xml)
 main()
